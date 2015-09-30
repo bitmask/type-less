@@ -1,0 +1,16 @@
+
+
+Step 1: Combine the rows of A1 and A2 into a file called A
+        These are expression levels for genes of a pulldown experiment.
+
+Step 2: File B contains the common names of the genes in A, and they are sorted in the same order as A.
+        Combine the columns of A and B into a file called AB.
+
+Step 3: File C also contains the common names of the genes, but it has lines for all the yeast genes.
+        Combine the columns of A and C into a file called AC.
+
+        Hint: you might need to sort A and C first
+
+Step 4: (Bonus) Check that files AB and AC are exactly the same.  If they are not the same, why not?
+
+

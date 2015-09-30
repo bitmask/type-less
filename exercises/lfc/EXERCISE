@@ -1,0 +1,7 @@
+
+
+The file holds expression data in two columns, om45.2m.pulldown.rpkm and om45.2m.total.rpkm.
+
+Calculate the log fold change (base 2) of om45.2m.pulldown.rpkm to om45.2m.total.rpkm.  
+
+

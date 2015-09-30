@@ -1,0 +1,167 @@
+
+# Viking Thursdays -- Type Less and Do More
+# October, 2015
+# Helen Cook
+#
+# .zshrc configuration file
+#
+# Licensed CC0 -- you are free to use, share, modify this configuration without attribution
+
+
+# alias for mass move
+autoload -U zmv
+alias mmv='noglob zmv -W'
+
+# history settings
+export HISTFILE=~/.history
+setopt EXTENDED_HISTORY     # store date in .history
+export SAVEHIST=9999999     # number of lines to save
+export HISTSIZE=$SAVEHIST   # number of lines from .history to read in at start of new shell
+setopt HIST_IGNORE_ALL_DUPS # history is de-duped
+#setopt INC_APPEND_HISTORY  # append as we execute, not when we leave the shell
+#setopt SHARE_HISTORY       # share one history between all open shells
+
+# enable **/file expansion, negation [^ab]*, and more
+setopt EXTENDED_GLOB
+
+# set up aliases for recently used directories
+setopt AUTOPUSHD
+setopt PUSHDIGNOREDUPS
+setopt pushdsilent 
+setopt pushdtohome
+alias d='dirs -v'
+for index ({1..9}) alias "$index"="cd +${index}"; unset index
+
+# set up control + underscore to bring back the last word of the last line
+bindkey "^_" insert-last-word
+
+# alias for generating histogram
+alias -g hist="sort | uniq -c | sort -n" 
+
+# alias for sampling from files
+alias -g sam='nl | shuf | head | sort -n | cut -f2-'
+
+# alias for diff if colordiff is installed
+if (( $+commands[colordiff] )); then
+    alias diff='colordiff -u'
+fi
+
+# set up GNU tools for Mac folks
+if (( $+commands[gshuf] )); then
+    alias shuf='gshuf'
+fi
+if (( $+commands[gsort] )); then
+    alias sort='gsort'
+fi
+if (( $+commands[gls] )); then
+    alias ls='gls'
+fi
+
+# set up ctrl-R to bring back previous commands with no duplicates
+bindkey '^R' history-incremental-pattern-search-backward
+zstyle ':completion:*:history-words' remove-all-dups yes
+
+# alias for coloured grep output if we aren't writing into a file
+if (( $+commands[ggrep] )); then
+    alias grep='ggrep --color=auto'
+else
+    alias grep='grep --color=auto'
+fi
+
+
+# set up coloured ls output
+if [[ $TERM =~ "-256color$" ]]; then
+    export LS_COLORS='di=\e[38;5;33:ln=35:so=36:pi=32:ex=33:bd=34;46:cd=34;43:su=33;44:sg=33;42:tw=34;43:ow=34;41:*.fasta=35:*.fa=35:'
+else
+    export LS_COLORS='di=34:ln=35:so=36:pi=32:ex=33:bd=34;46:cd=34;43:su=33;44:sg=33;42:tw=34;43:ow=34;41:*.fasta=35:*.fa=35'
+fi
+
+# for Mac OS X if gls is installed
+if (( $+commands[gls] )); then
+    alias ls='gls --color=auto'
+fi
+# if on Linux and using GNU ls, then uncomment the following line
+# alias ls='ls --color=auto'
+
+
+# set up the prompt
+# your terminal emulator (iterm, terminal, etc) must support 256 colours to use the 256 colour codes (most do by default)
+setopt promptsubst # enable substitution in prompt 
+
+if [[ $TERM =~ "-256color$" ]]; then
+    # Available colours
+    # for colour in {0..255}; do echo -e "\e[38;05;${colour}m $colour Test"; done
+    PS1_ERROR_CODE="%(? %{%F{33}%} %{%F{124}%})%?"
+    PS1_USER_HOST="%{%F{33}%}%n%{%F{238}%}@%{%F{33}%}%m%{%F{238}%}[%y]"
+    PS1_DIR="%{%F{45}%}%~"
+    PS1_PRMT="%{%F{33}%}%# %{%F{grey}%}"
+    PS1_OPEN_BR="%{%F{238}%}("
+    PS1_CLOSE_BR="%{%F{238}%})" 
+    PS1_MID_BR="%{%F{238}%})-("
+else
+    PS1_ERROR_CODE="%(? %{%F{blue}%} %{%F{magenta}%})%?"
+    PS1_USER_HOST="%{%F{blue}%}%n%{%F{black}%}@%{%F{blue}%}%m%{%F{black}%}[%y]"
+    PS1_DIR="%{%F{blue}%}%~"
+    PS1_PRMT="%{%F{blue}%}%# %{%F{grey}%}"
+    PS1_OPEN_BR="%{%F{black}%}("
+    PS1_CLOSE_BR="%{%F{black}%})" 
+    PS1_MID_BR="%{%F{black}%})-("
+fi
+
+PS1='
+$PS1_OPEN_BR$PS1_USER_HOST$PS1_MID_BR$PS1_DIR$PS1_CLOSE_BR
+$PS1_OPEN_BR$PS1_ERROR_CODE$PS1_CLOSE_BR$PS1_PRMT'
+
+# Can also have a prompt on the right hand side of the screen
+export RPROMPT=''
+
+
+
+########## Completion
+
+setopt complete_in_word
+
+zstyle ':completion:*' verbose yes
+zstyle ':completion:*:descriptions' format '%B%d%b'
+zstyle ':completion:*:messages' format '%d'
+zstyle ':completion:*:warnings' format 'No matches for: %d'
+zstyle ':completion:*' group-name ''
+# do file name completion if all other completions fail
+zstyle ':completion:*' completer _complete _ignored _files
+
+# Use caching to make completion for commands such as dpkg and apt usable.
+zstyle ':completion::complete:*' use-cache on
+zstyle ':completion::complete:*' cache-path "${ZDOTDIR:-$HOME}/.zcompcache"
+
+# Group matches and describe.
+zstyle ':completion:*:*:*:*:*' menu select
+zstyle ':completion:*:matches' group 'yes'
+zstyle ':completion:*:options' description 'yes'
+zstyle ':completion:*:options' auto-description '%d'
+zstyle ':completion:*:corrections' format ' %F{green}-- %d (errors: %e) --%f'
+zstyle ':completion:*:descriptions' format ' %F{yellow}-- %d --%f'
+zstyle ':completion:*:messages' format ' %F{purple} -- %d --%f'
+zstyle ':completion:*:warnings' format ' %F{red}-- no matches found --%f'
+zstyle ':completion:*:default' list-prompt '%S%M matches%s'
+zstyle ':completion:*' format ' %F{yellow}-- %d --%f'
+zstyle ':completion:*' group-name ''
+zstyle ':completion:*' verbose yes
+
+# Directories
+zstyle ':completion:*:default' list-colors ${(s.:.)LS_COLORS}
+zstyle ':completion:*:*:cd:*' tag-order local-directories directory-stack path-directories
+zstyle ':completion:*:*:cd:*:directory-stack' menu yes select
+zstyle ':completion:*:-tilde-:*' group-order 'named-directories' 'path-directories' 'users' 'expand'
+zstyle ':completion:*' squeeze-slashes true
+
+# History
+zstyle ':completion:*:history-words' stop yes
+zstyle ':completion:*:history-words' remove-all-dups yes
+zstyle ':completion:*:history-words' list true
+zstyle ':completion:*:history-words' menu yes
+
+# Add any custom extensions here
+compctl -k "( login.cbs.dtu.dk )" scp # change this to the servers you access often
+
+autoload -Uz compinit && compinit -i
+
