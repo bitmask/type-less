@@ -1,18 +1,17 @@
 
 # Viking Thursdays -- Type Less and Do More
 # October, 2015
-# Helen Cook
+# Helen Cook, CBioVikings
 #
 # .zshrc configuration file
 #
-# Licensed CC0 -- you are free to use, share, modify this configuration without attribution
+# Licensed CC Attribution -- you are free to use, share, modify this configuration, but please attribute
 
 
-# alias for mass move
-autoload -U zmv
-alias mmv='noglob zmv -W'
 
-# history settings
+################################################################################
+# History settings
+
 export HISTFILE=~/.history
 setopt EXTENDED_HISTORY     # store date in .history
 export SAVEHIST=9999999     # number of lines to save
@@ -24,6 +23,15 @@ setopt HIST_IGNORE_ALL_DUPS # history is de-duped
 # enable **/file expansion, negation [^ab]*, and more
 setopt EXTENDED_GLOB
 
+
+
+################################################################################
+# Aliases and mappings
+
+# alias for mass move
+autoload -U zmv
+alias mmv='noglob zmv -W'
+
 # set up aliases for recently used directories
 setopt AUTOPUSHD
 setopt PUSHDIGNOREDUPS
@@ -34,6 +42,10 @@ for index ({1..9}) alias "$index"="cd +${index}"; unset index
 
 # set up control + underscore to bring back the last word of the last line
 bindkey "^_" insert-last-word
+
+# set up ctrl-R to bring back previous commands with no duplicates
+bindkey '^R' history-incremental-pattern-search-backward
+zstyle ':completion:*:history-words' remove-all-dups yes
 
 # alias for generating histogram
 alias -g hist="sort | uniq -c | sort -n" 
@@ -57,9 +69,9 @@ if (( $+commands[gls] )); then
     alias ls='gls'
 fi
 
-# set up ctrl-R to bring back previous commands with no duplicates
-bindkey '^R' history-incremental-pattern-search-backward
-zstyle ':completion:*:history-words' remove-all-dups yes
+if (( $+commands[tmux] )); then
+    alias tmux='tmux -2 -u' # colours and utf-8 support
+fi
 
 # alias for coloured grep output if we aren't writing into a file
 if (( $+commands[ggrep] )); then
@@ -69,7 +81,10 @@ else
 fi
 
 
+
+################################################################################
 # set up coloured ls output
+
 if [[ $TERM =~ "-256color$" ]]; then
     export LS_COLORS='di=\e[38;5;33:ln=35:so=36:pi=32:ex=33:bd=34;46:cd=34;43:su=33;44:sg=33;42:tw=34;43:ow=34;41:*.fasta=35:*.fa=35:'
 else
@@ -80,28 +95,45 @@ fi
 if (( $+commands[gls] )); then
     alias ls='gls --color=auto'
 fi
+
 # if on Linux and using GNU ls, then uncomment the following line
 # alias ls='ls --color=auto'
 
 
-# set up the prompt
+
+################################################################################
+# Set up the prompt
+
+# Prompt function from http://stevelosh.com/blog/2010/02/my-extravagant-zsh-prompt/
+function repo_prompt_char {
+    # set prompt character if we are in a repository, but not in a mounted directory (too slow)
+    if [[ `pwd` =~ mnt ]]; then
+        echo '⦰'
+    else
+        git branch >/dev/null 2>/dev/null && echo '●' && return
+        hg root >/dev/null 2>/dev/null && echo '☿' && return
+        echo '○'
+    fi
+}
+
 # your terminal emulator (iterm, terminal, etc) must support 256 colours to use the 256 colour codes (most do by default)
 setopt promptsubst # enable substitution in prompt 
+autoload -U colors && colors # enable colour names
 
 if [[ $TERM =~ "-256color$" ]]; then
     # Available colours
     # for colour in {0..255}; do echo -e "\e[38;05;${colour}m $colour Test"; done
-    PS1_ERROR_CODE="%(? %{%F{33}%} %{%F{124}%})%?"
     PS1_USER_HOST="%{%F{33}%}%n%{%F{238}%}@%{%F{33}%}%m%{%F{238}%}[%y]"
     PS1_DIR="%{%F{45}%}%~"
+    PS1_ERROR_CODE="%(? %{%F{33}%} %{%F{124}%})%?"
     PS1_PRMT="%{%F{33}%}%# %{%F{grey}%}"
     PS1_OPEN_BR="%{%F{238}%}("
     PS1_CLOSE_BR="%{%F{238}%})" 
     PS1_MID_BR="%{%F{238}%})-("
 else
-    PS1_ERROR_CODE="%(? %{%F{blue}%} %{%F{magenta}%})%?"
     PS1_USER_HOST="%{%F{blue}%}%n%{%F{black}%}@%{%F{blue}%}%m%{%F{black}%}[%y]"
     PS1_DIR="%{%F{blue}%}%~"
+    PS1_ERROR_CODE="%(? %{%F{blue}%} %{%F{magenta}%})%?"
     PS1_PRMT="%{%F{blue}%}%# %{%F{grey}%}"
     PS1_OPEN_BR="%{%F{black}%}("
     PS1_CLOSE_BR="%{%F{black}%})" 
@@ -112,12 +144,19 @@ PS1='
 $PS1_OPEN_BR$PS1_USER_HOST$PS1_MID_BR$PS1_DIR$PS1_CLOSE_BR
 $PS1_OPEN_BR$PS1_ERROR_CODE$PS1_CLOSE_BR$PS1_PRMT'
 
+# if you want to include the repository information in your prompt, uncomment the following lines
+#PS1_REPO="%{%F{210}%}"
+#PS1='
+#$PS1_OPEN_BR$PS1_USER_HOST$PS1_MID_BR$PS1_DIR$PS1_CLOSE_BR
+#$PS1_OPEN_BR$PS1_ERROR_CODE$PS1_MID_BR$PS1_REPO$(repo_prompt_char)$PS1_CLOSE_BR$PS1_PRMT'
+
 # Can also have a prompt on the right hand side of the screen
 export RPROMPT=''
 
 
 
-########## Completion
+################################################################################
+# Completion
 
 setopt complete_in_word
 
@@ -164,4 +203,29 @@ zstyle ':completion:*:history-words' menu yes
 compctl -k "( login.cbs.dtu.dk )" scp # change this to the servers you access often
 
 autoload -Uz compinit && compinit -i
+
+
+
+################################################################################
+# Functions
+
+# Find newest work in a directory tree
+newest () { 
+    local LINES=5
+    if [[ $* != "" ]]; then
+        local LINES=$*
+    fi
+    # TODO there is probably a nicer way to do this -- don't run find twice
+    paste <( for d in `find . -type f -print0 | xargs -0 stat -f "%m %N" | sort -n | tail -n $LINES | cut -f1 -d" "`; do date -j -f %s $d +%a" "%d" "%b" "%k":"%M; done ) <(find . -type f -print0 | xargs -0 stat -f "%m %N" | sort -n | tail -n $LINES | cut -f2 -d" ") 
+}
+
+
+# Set the title of iterm2 tabs to the useful part of the directory
+#function precmd {
+#    # adapted from http://aperiodic.net/phil/prompt/
+#    local titlelen=20
+#    TITLE=$(print -P "%$titlelen<...<%~")
+#    echo -ne "\e]1;$TITLE\a"
+#}
+
 
